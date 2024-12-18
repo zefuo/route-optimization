@@ -8,7 +8,7 @@ type Vehicle = {
 type NewVehicle = Omit<Vehicle, "id">;
 
 class VehicleService {
-  private baseUrl = "http://18.195.26.79:5000/vehicles";
+  private baseUrl = "http://18.195.26.79:5001/vehicles";
 
   async getAllVehicles(): Promise<Vehicle[]> {
     try {

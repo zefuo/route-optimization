@@ -7,7 +7,7 @@ type StartPoint = Point;
 type DumpPoint = Point;
 
 class StartEndPointService {
-  private baseUrl = "http://18.195.26.79:5000/start-end-points";
+  private baseUrl = "http://18.195.26.79:5001/start-end-points";
 
   // Başlangıç noktasını getir
   async getStartPoint(): Promise<StartPoint | null> {

@@ -5,7 +5,7 @@ type CountData = {
 };
 
 class CountService {
-  private baseUrl = "http://18.195.26.79:5000/counts";
+  private baseUrl = "http://18.195.26.79:5001/counts";
 
   async getCounts(): Promise<CountData> {
     try {
