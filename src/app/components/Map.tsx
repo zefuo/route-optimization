@@ -1,5 +1,7 @@
 "use client";
 
+import { startEndPointService } from "@/services/startEndPointService";
+import { wastePointService } from "@/services/wastePointService";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
@@ -25,7 +27,7 @@ export default function Map() {
     }),
     çöp_noktası: L.icon({
       iconUrl: "/icons/red-marker.png", // Bu ikonu eklemelisiniz
-      iconSize: [17, 20],
+      iconSize: [20, 20],
       iconAnchor: [10, 10],
     }),
   };
@@ -156,61 +158,72 @@ export default function Map() {
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const handleMapClick = (e: L.LeafletMouseEvent) => {
+    const handleMapClick = async (e: L.LeafletMouseEvent) => {
       if (activeSelection) {
         const { lat, lng } = e.latlng;
+        const point = {
+          latitude: lat.toString(),
+          longitude: lng.toString(),
+        };
 
-        // Yeni marker oluştur
-        const marker = L.marker([lat, lng], {
-          icon: icons[activeSelection],
-        }).addTo(mapRef.current!);
+        try {
+          switch (activeSelection) {
+            case "başlangıç":
+              await startEndPointService.saveStartPoint(point);
+              // Marker oluştur
+              const startMarker = L.marker([lat, lng], {
+                icon: icons[activeSelection],
+              }).addTo(mapRef.current!);
 
-        // Popup içeriği oluştur
-        const popupContent = document.createElement("div");
-        const baseContent = `
-          <div class="flex flex-col gap-2">
-            <div>${
-              activeSelection.charAt(0).toUpperCase() + activeSelection.slice(1)
-            } Noktası</div>
-            <div class="text-sm text-gray-600">Koordinatlar: ${lat.toFixed(
-              6
-            )}, ${lng.toFixed(6)}</div>
-            ${
-              activeSelection === "çöp_noktası"
-                ? `
-              <button class="delete-marker bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm transition-colors duration-200 flex items-center justify-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Noktayı Kaldır
-              </button>
-            `
-                : ""
-            }
-          </div>
-        `;
+              startMarker.bindPopup("Başlangıç Noktası");
+              setMarkers((prev) => [...prev, startMarker]);
+              setActiveSelection(null);
 
-        popupContent.innerHTML = baseContent;
+              break;
 
-        // Sadece çöp noktası ise silme butonu olayını ekle
-        if (activeSelection === "çöp_noktası") {
-          const deleteButton = popupContent.querySelector(".delete-marker");
-          if (deleteButton) {
-            deleteButton.addEventListener("click", () => {
-              marker.remove();
-              setMarkers((prev) => prev.filter((m) => m !== marker));
-            });
+            case "döküm_noktası":
+              await startEndPointService.saveDumpPoint(point);
+              // Marker oluştur
+              const dumpMarker = L.marker([lat, lng], {
+                icon: icons[activeSelection],
+              }).addTo(mapRef.current!);
+
+              dumpMarker.bindPopup("Döküm Noktası");
+              setMarkers((prev) => [...prev, dumpMarker]);
+              setActiveSelection(null);
+
+              break;
+
+            case "çöp_noktası":
+              const wastePoint = {
+                ...point,
+                name: `Çöp Noktası`,
+              };
+
+              await wastePointService.addWastePoint(wastePoint);
+              // Marker oluştur
+              const wasteMarker = L.marker([lat, lng], {
+                icon: icons[activeSelection],
+              }).addTo(mapRef.current!);
+
+              // Popup içeriği oluştur
+              const popupContent = document.createElement("div");
+              popupContent.innerHTML = `
+                <div class="flex flex-col gap-2">
+                  <div>${wastePoint.name}</div>
+                  <div class="text-sm text-gray-600">Koordinatlar: ${lat.toFixed(
+                    6
+                  )}, ${lng.toFixed(6)}</div>
+                </div>
+              `;
+              wasteMarker.bindPopup(popupContent);
+              setMarkers((prev) => [...prev, wasteMarker]);
+              break;
           }
-        }
 
-        marker.bindPopup(popupContent);
-
-        // Markers state'ini güncelle
-        setMarkers((prev) => [...prev, marker]);
-
-        // Seçimi sıfırla
-        if (activeSelection !== "çöp_noktası") {
-          setActiveSelection(null);
+          // Seçimi sıfırla
+        } catch (error) {
+          alert(error instanceof Error ? error.message : "Bir hata oluştu");
         }
       }
     };
