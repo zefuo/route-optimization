@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Docker kurulu olmalı. Bütün kurulum downloadlarlarla birlikte yaklaşık 20 dakika sürebilir. Sıralamayı sakın bozma.
+Sadece chrome tabanlı bir browser kullanılmalı. Firefox kullanılırsa çalışmaz.
+> docker pull osrm/osrm-backend
 
-## Getting Started
+boş bir klasör oluştur.
+bu klasörde conf diye bir klasör oluştur.
+config.yml dosyasını conf klasörüne at.
+ana klasöre dön!!
 
-First, run the development server:
+> https://download.geofabrik.de/europe/turkey-latest.osm.pbf bu linkten dosyayı indir.
+az önce oluşturduğun klasörde dosyayı klasör içine at. klasörün içine gidip aşağıdaki komutları sırasıyla çalıştır.
+Aşağıdaki komutları Powershellde çalıştırıyorsan $(pwd) yerine ${pwd} yaz.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+> docker run -t -v $(pwd):/data osrm/osrm-backend osrm-extract -p /opt/car.lua /data/turkey-latest.osm.pbf
+> docker run -t -v $(pwd):/data osrm/osrm-backend osrm-partition /data/turkey-latest.osm.pbf
+> docker run -t -v $(pwd):/data osrm/osrm-backend osrm-customize /data/turkey-latest.osm.pbf
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> docker create network furkan-bridge
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+OSRM API çalıştırmak için;
+> docker run -d --name osrm --network furkan-bridge -p 5000:5000 -v "${PWD}:/data" osrm/osrm-backend osrm-routed --algorithm mld /data/turkey-latest.osrm
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+VROOM API çalıştırmak için;
+> docker run -dt --rm --name vroom --network furkan-bridge -p 3000:3000 -v $PWD/conf:/conf -e VROOM_ROUTER=osrm ghcr.io/vroom-project/vroom-docker:v1.14.0
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+## FE
+Kodun bulunduğu dizine gel.     
+>npm install
+>npm run dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## BE
+Kodun bulunduğu dizine gel. 
+>pip install flask flask-cors flask-sqlalchemy
+>python app.py
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+docker run -t -v ${pwd}:/data osrm/osrm-backend osrm-customize /data/turkey-latest.osm.pbf
