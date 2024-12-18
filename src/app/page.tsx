@@ -1,3 +1,5 @@
+'use client';
+import { useState } from "react";
 import { Toaster } from "react-hot-toast";
 import Accordion from "./components/Accordion";
 import Map from "./components/Map";
@@ -7,7 +9,20 @@ import StartEndPointManagement from "./components/StartEndPointManagement";
 import VehicleManagement from "./components/VehicleManagement";
 import WastePointManagement from "./components/WastePointManagement";
 
+type OptimizationResult = {
+  routes: Array<{
+    vehicleId: number;
+    path: [number, number][];
+  }>;
+};
+
 export default function Home() {
+  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+
+  const handleOptimizationComplete = (result: OptimizationResult) => {
+    setOptimizationResult(result);
+  };
+
   return (
     <main className="flex flex-col min-h-screen">
       <div><Toaster/></div>
@@ -27,11 +42,11 @@ export default function Home() {
             <StartEndPointManagement />
           </Accordion>
           <Accordion title="Rota Optimizasyonu" id="routes">
-            <RouteOptimization />
+            <RouteOptimization onOptimizationComplete={handleOptimizationComplete} />
           </Accordion>
         </div>
         <div className="w-full md:w-3/4 p-4">
-          <Map />
+          <Map optimizationResult={optimizationResult} />
         </div>
       </div>
     </main>

@@ -5,8 +5,13 @@ import { startEndPointService } from "@/services/startEndPointService";
 import { vehicleService } from "@/services/vehicleService";
 import { wastePointService } from "@/services/wastePointService";
 import { useState } from 'react';
+import { toast } from "react-hot-toast";
 
-export default function RouteOptimization() {
+type RouteOptimizationProps = {
+  onOptimizationComplete: (result: any) => void;
+};
+
+export default function RouteOptimization({ onOptimizationComplete }: RouteOptimizationProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,9 +49,8 @@ export default function RouteOptimization() {
         { id: -1, ...dumpPoint }
       );
 
-      // Sonucu işle ve göster
-      console.log("Optimizasyon sonucu:", result);
-      alert("Rota optimizasyonu başarıyla tamamlandı!");
+      onOptimizationComplete(result);
+      toast.success("Rota optimizasyonu başarıyla tamamlandı!");
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu");
