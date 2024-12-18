@@ -1,94 +1,125 @@
 "use client";
 
+import { vehicleService } from "@/services/vehicleService";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 type Vehicle = {
   id: number;
-  brand?: string;
-  model?: string;
   plate: string;
-  capacity?: number;
+  brand: string | null;
+  model: string | null;
 };
 
 export default function VehicleManagement() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newVehicle, setNewVehicle] = useState<Omit<Vehicle, "id">>({
-    brand: "",
-    model: "",
     plate: "",
-    capacity: undefined,
+    brand: null,
+    model: null,
   });
 
-  useEffect(() => {
-    const accordion = document.querySelector('[data-accordion="vehicles"]');
-    if (accordion) {
-      accordion.setAttribute("data-count", vehicles.length.toString());
+  const fetchVehicles = async () => {
+    try {
+      const data = await vehicleService.getAllVehicles();
+      setVehicles(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+    } finally {
+      setLoading(false);
     }
-  }, [vehicles]);
+  };
 
-  const addVehicle = () => {
+  const addVehicle = async () => {
     if (!newVehicle.plate.trim()) {
-      alert("Lütfen plaka giriniz");
+      toast.error("Lütfen plaka giriniz");
       return;
     }
-    setVehicles([...vehicles, { ...newVehicle, id: Date.now() }]);
-    setNewVehicle({ brand: "", model: "", plate: "", capacity: undefined });
+
+    try {
+      const addedVehicle = await vehicleService.addVehicle(newVehicle);
+      setVehicles([...vehicles, addedVehicle]);
+      setNewVehicle({ plate: "", brand: null, model: null });
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Araç eklenirken bir hata oluştu"
+      );
+    }
   };
 
-  const deleteVehicle = (id: number) => {
-    setVehicles(vehicles.filter((vehicle) => vehicle.id !== id));
+  const deleteVehicle = async (id: number) => {
+    try {
+      await vehicleService.deleteVehicle(id);
+      setVehicles(vehicles.filter((vehicle) => vehicle.id !== id));
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Araç silinirken bir hata oluştu"
+      );
+    }
   };
+
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-4 text-red-500">
+        <p>{error}</p>
+        <button
+          onClick={fetchVehicles}
+          className="mt-2 text-blue-500 hover:text-blue-600"
+        >
+          Tekrar Dene
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="grid gap-3 mb-4">
-        <input
-          type="text"
-          placeholder="* Plaka (34 ABC 123)"
-          className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          value={newVehicle.plate}
-          onChange={(e) =>
-            setNewVehicle({
-              ...newVehicle,
-              plate: e.target.value.toUpperCase(),
-            })
-          }
-        />
-        <div className="grid grid-cols-2 gap-2">
+      <div className="grid gap-2 mb-3">
+        <div className="grid grid-cols-1 gap-2">
+          <input
+            type="text"
+            placeholder="* Plaka"
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={newVehicle.plate}
+            onChange={(e) =>
+              setNewVehicle({ ...newVehicle, plate: e.target.value })
+            }
+          />
           <input
             type="text"
             placeholder="Marka"
-            className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            value={newVehicle.brand}
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={newVehicle.brand || ""}
             onChange={(e) =>
-              setNewVehicle({ ...newVehicle, brand: e.target.value })
+              setNewVehicle({ ...newVehicle, brand: e.target.value || null })
             }
           />
           <input
             type="text"
             placeholder="Model"
-            className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            value={newVehicle.model}
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={newVehicle.model || ""}
             onChange={(e) =>
-              setNewVehicle({ ...newVehicle, model: e.target.value })
+              setNewVehicle({ ...newVehicle, model: e.target.value || null })
             }
           />
         </div>
-
-        <input
-          type="number"
-          placeholder="Kapasite (ton)"
-          className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          value={newVehicle.capacity || ""}
-          onChange={(e) =>
-            setNewVehicle({
-              ...newVehicle,
-              capacity: e.target.value ? Number(e.target.value) : undefined,
-            })
-          }
-        />
         <button
-          className="w-full bg-blue-500 text-white p-2.5 rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center gap-2"
+          className="w-full bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center gap-2"
           onClick={addVehicle}
         >
           <svg
@@ -108,30 +139,22 @@ export default function VehicleManagement() {
         </button>
       </div>
 
-      <div className="mt-4">
+      <div>
         {vehicles.length > 0 ? (
-          <div className="grid gap-3">
-            {vehicles.map((vehicle, index) => (
-              <div key={vehicle.id} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                  {index + 1}
-                </div>
-                <div className="flex-1 bg-white border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <div className="grid gap-2">
+            {vehicles.map((vehicle) => (
+              <div key={vehicle.id} className="flex items-center gap-2">
+                <div className="flex-1 bg-white border rounded-lg p-2 shadow-sm hover:shadow-md transition-shadow duration-200">
                   <div className="flex justify-between items-center">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold">
-                          {vehicle.plate}
-                        </span>
-                      </div>
-                      <div className="text-gray-500 text-sm mt-1">
-                        {vehicle.brand && vehicle.model && (
-                          <div>
-                            {vehicle.brand} {vehicle.model}
-                          </div>
-                        )}
-                        {vehicle.capacity && (
-                          <div>Kapasite: {vehicle.capacity} ton</div>
+                        <span className="font-semibold">{vehicle.plate}</span>
+                        {(vehicle.brand || vehicle.model) && (
+                          <span className="text-sm text-gray-500">
+                            {[vehicle.brand, vehicle.model]
+                              .filter(Boolean)
+                              .join(" ")}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -159,9 +182,9 @@ export default function VehicleManagement() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-6 text-gray-500">
+          <div className="text-center py-4 text-gray-500">
             <svg
-              className="w-12 h-12 mx-auto text-gray-400 mb-3"
+              className="w-10 h-10 mx-auto text-gray-400 mb-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

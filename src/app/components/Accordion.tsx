@@ -1,45 +1,47 @@
 "use client";
 
+import { countService } from "@/services/countService";
 import { useEffect, useState } from "react";
 
 type AccordionProps = {
+  id: string;
   title: string;
   children: React.ReactNode;
-  defaultOpen?: boolean;
-  count?: number;
-  id: string;
 };
 
-export default function Accordion({
-  title,
-  children,
-  defaultOpen = false,
-  count,
-  id,
-}: AccordionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [currentCount, setCurrentCount] = useState(count);
+export default function Accordion({ id, title, children }: AccordionProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentCount, setCurrentCount] = useState<number>(0);
 
   useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (
-          mutation.type === "attributes" &&
-          mutation.attributeName === "data-count"
-        ) {
-          const target = mutation.target as HTMLElement;
-          const newCount = Number(target.getAttribute("data-count"));
-          setCurrentCount(newCount);
+    const fetchCount = async () => {
+      try {
+        const counts = await countService.getCounts();
+        switch (id) {
+          case "vehicles":
+            setCurrentCount(counts.vehicles);
+            break;
+          case "wastepoints":
+            setCurrentCount(counts.wastePoints);
+            break;
+          case "routes":
+            setCurrentCount(counts.routes);
+            break;
+          default:
+            setCurrentCount(0);
         }
-      });
-    });
+      } catch (error) {
+        console.error("Count bilgisi alınamadı:", error);
+        setCurrentCount(0);
+      }
+    };
 
-    const element = document.querySelector(`[data-accordion="${id}"]`);
-    if (element) {
-      observer.observe(element, { attributes: true });
-    }
+    fetchCount();
 
-    return () => observer.disconnect();
+    // Periyodik güncelleme için interval
+    const interval = setInterval(fetchCount, 30000); // Her 30 saniyede bir güncelle
+
+    return () => clearInterval(interval);
   }, [id]);
 
   return (
@@ -50,8 +52,8 @@ export default function Accordion({
       >
         <div className="flex items-center gap-2">
           <span>{title}</span>
-          {count !== undefined && (
-            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+          {currentCount > 0 && (
+            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
               {currentCount}
             </span>
           )}

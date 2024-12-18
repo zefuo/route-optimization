@@ -1,6 +1,8 @@
 "use client";
 
+import { wastePointService } from "@/services/wastePointService";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 type WastePoint = {
   id: number;
@@ -11,31 +13,106 @@ type WastePoint = {
 
 export default function WastePointManagement() {
   const [wastePoints, setWastePoints] = useState<WastePoint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newWastePoint, setNewWastePoint] = useState<Omit<WastePoint, "id">>({
     name: "",
     latitude: "",
     longitude: "",
   });
 
-  useEffect(() => {
-    const accordion = document.querySelector('[data-accordion="wastepoints"]');
-    if (accordion) {
-      accordion.setAttribute("data-count", wastePoints.length.toString());
+  // Çöp noktalarını getir
+  const fetchWastePoints = async () => {
+    try {
+      const data = await wastePointService.getAllWastePoints();
+      setWastePoints(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+    } finally {
+      setLoading(false);
     }
-  }, [wastePoints]);
+  };
 
-  const addWastePoint = () => {
+  // Yeni çöp noktası ekle
+  const addWastePoint = async () => {
     if (!newWastePoint.name.trim()) {
-      alert("Lütfen nokta adı giriniz");
+      toast.error("Lütfen nokta adı giriniz");
       return;
     }
-    setWastePoints([...wastePoints, { ...newWastePoint, id: Date.now() }]);
-    setNewWastePoint({ name: "", latitude: "", longitude: "" });
+
+    if (!newWastePoint.latitude.trim() || !newWastePoint.longitude.trim()) {
+      toast.error("Enlem ve boylam alanları zorunludur");
+      return;
+    }
+
+    const lat = parseFloat(newWastePoint.latitude);
+    const lng = parseFloat(newWastePoint.longitude);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      toast.error("Lütfen geçerli enlem ve boylam değerleri giriniz");
+      return;
+    }
+
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      toast.error(
+        "Lütfen geçerli koordinat aralığı giriniz\nEnlem: -90 ile 90 arası\nBoylam: -180 ile 180 arası"
+      );
+      return;
+    }
+
+    try {
+      const addedPoint = await wastePointService.addWastePoint(newWastePoint);
+      setWastePoints([...wastePoints, addedPoint]);
+      setNewWastePoint({ name: "", latitude: "", longitude: "" });
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Çöp noktası eklenirken bir hata oluştu"
+      );
+    }
   };
 
-  const deleteWastePoint = (id: number) => {
-    setWastePoints(wastePoints.filter((point) => point.id !== id));
+  // Çöp noktası sil
+  const deleteWastePoint = async (id: number) => {
+    try {
+      await wastePointService.deleteWastePoint(id);
+      setWastePoints(wastePoints.filter((point) => point.id !== id));
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Çöp noktası silinirken bir hata oluştu"
+      );
+    }
   };
+
+  // Sayfa yüklendiğinde çöp noktalarını getir
+  useEffect(() => {
+    fetchWastePoints();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-4 text-red-500">
+        <p>{error}</p>
+        <button
+          onClick={fetchWastePoints}
+          className="mt-2 text-blue-500 hover:text-blue-600"
+        >
+          Tekrar Dene
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
