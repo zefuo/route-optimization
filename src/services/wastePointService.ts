@@ -8,7 +8,7 @@ type WastePoint = {
 type NewWastePoint = Omit<WastePoint, "id">;
 
 class WastePointService {
-  private baseUrl = "http://127.0.0.1:5000/waste-points";
+  private baseUrl = "http://18.195.26.79:5000/waste-points";
 
   // Tüm çöp noktalarını getir
   async getAllWastePoints(): Promise<WastePoint[]> {

@@ -3,7 +3,7 @@ import L from "leaflet";
 export async function createRoute(waypoints: [number, number][], color: string): Promise<L.LayerGroup> {
   try {
     const points = waypoints.map(coord => `${coord[1]},${coord[0]}`).join(';');
-    const url = `http://localhost:5000/route/v1/driving/${points}?overview=full&geometries=geojson`;
+    const url = `http://18.195.26.79:5000/route/v1/driving/${points}?overview=full&geometries=geojson`;
 
     const response = await fetch(url);
     const data = await response.json();

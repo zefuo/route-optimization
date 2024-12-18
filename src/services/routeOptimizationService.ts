@@ -30,7 +30,7 @@ type OptimizationResult = {
 };
 
 export class RouteOptimizationService {
-  private vroomUrl = 'http://localhost:3000';
+  private vroomUrl = 'http://18.195.26.79:3000';
 
   async optimizeRoutes(
     vehicles: Vehicle[],
