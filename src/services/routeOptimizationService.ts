@@ -15,31 +15,18 @@ type Vehicle = {
   model: string | null;
 };
 
-type VroomStep = {
-  type: string;
-  location: [number, number]; // [lng, lat]
-  setup: number;
-  service: number;
-  waiting_time: number;
-  arrival: number;
-  duration: number;
-  violations: any[];
-};
-
-type VroomRoute = {
-  vehicle: number;
-  cost: number;
-  setup: number;
-  service: number;
-  duration: number;
-  waiting_time: number;
-  priority: number;
-  steps: VroomStep[];
-  violations: any[];
-};
-
-type VroomResponse = {
-  routes: VroomRoute[];
+type OptimizationResult = {
+  routes: Array<{
+    vehicleId: number;
+    duration: number;
+    distance: number;
+    steps: Array<{
+      location: [number, number];
+      type: string;
+      arrival: number;
+      duration: number;
+    }>;
+  }>;
 };
 
 export class RouteOptimizationService {
@@ -50,40 +37,58 @@ export class RouteOptimizationService {
     wastePoints: WastePoint[],
     startPoint: Point,
     dumpPoint: Point
-  ) {
+  ): Promise<OptimizationResult> {
     try {
-      // VROOM için veriyi hazırla
+      // Her iş için varsayılan kapasite kullanımı (örneğin her çöp noktası 1 birim)
       const jobs = wastePoints.map((point, index) => ({
         id: index + 1,
         location: [parseFloat(point.longitude), parseFloat(point.latitude)],
-        name: point.name
+        name: point.name,
+        amount: [1] // Her çöp noktası 1 birimlik kapasite kullanıyor
       }));
-
+      const jobsPerVehicle = Math.ceil(wastePoints.length / vehicles.length);
       const vroomVehicles = vehicles.map(vehicle => ({
         id: vehicle.id,
         start: [parseFloat(startPoint.longitude), parseFloat(startPoint.latitude)],
-        end: [parseFloat(dumpPoint.longitude), parseFloat(dumpPoint.latitude)]
+        end: [parseFloat(dumpPoint.longitude), parseFloat(dumpPoint.latitude)],
+        capacity: [jobsPerVehicle], // Araç kapasitesi, tanımlanmamışsa varsayılan 10
+        skills: [1], // Tüm araçlar aynı yeteneklere sahip
+        profile: "car" // Araç profili
       }));
+
+      const requestBody = {
+        jobs,
+        vehicles: vroomVehicles,
+        options: {
+          g: true, // Mesafe matrisini otomatik hesapla
+          minimize_vehicles: true // Minimum araç kullanımını optimize et
+        }
+      };
+
+      console.log("VROOM isteği:", JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(`${this.vroomUrl}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ jobs, vehicles: vroomVehicles })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
+        const errorData = await response.text();
+        console.error("VROOM yanıt hatası:", errorData);
         throw new Error('Rota optimizasyonu başarısız oldu');
       }
 
-      const result: VroomResponse = await response.json();
+      const result = await response.json();
+      console.log("VROOM yanıtı:", JSON.stringify(result, null, 2));
 
-      // VROOM yanıtını işle ve formatlı rotaları döndür
       return {
         routes: result.routes.map(route => ({
           vehicleId: route.vehicle,
           duration: route.duration,
+          distance: route.distance,
           steps: route.steps.map(step => ({
             location: [step.location[1], step.location[0]], // [lat, lng] formatına çevir
             type: step.type,

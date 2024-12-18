@@ -2,20 +2,33 @@
 
 import { routeOptimizationService } from "@/services/routeOptimizationService";
 import { startEndPointService } from "@/services/startEndPointService";
-import { vehicleService } from "@/services/vehicleService";
+import { Vehicle, vehicleService } from "@/services/vehicleService";
 import { wastePointService } from "@/services/wastePointService";
 import { useState } from 'react';
 import { toast } from "react-hot-toast";
 
-type RouteOptimizationProps = {
-  onOptimizationComplete: (result: any) => void;
+type OptimizationResult = {
+  routes: Array<{
+    vehicleId: number;
+    duration: number;
+    steps: Array<{
+      location: [number, number];
+      type: string;
+      arrival: number;
+      duration: number;
+    }>;
+  }>;
 };
 
-export default function RouteOptimization({ onOptimizationComplete }: RouteOptimizationProps) {
+type Props = {
+  onOptimizationComplete: (result: OptimizationResult, vehicles: Vehicle[]) => void;
+};
+
+export default function RouteOptimization({ onOptimizationComplete }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const startOptimization = async () => {
+  const handleOptimize = async () => {
     setLoading(true);
     setError(null);
 
@@ -45,11 +58,11 @@ export default function RouteOptimization({ onOptimizationComplete }: RouteOptim
       const result = await routeOptimizationService.optimizeRoutes(
         vehicles,
         wastePoints,
-        { id: 0, ...startPoint },
-        { id: -1, ...dumpPoint }
+        startPoint!,
+        dumpPoint!
       );
 
-      onOptimizationComplete(result);
+      onOptimizationComplete(result, vehicles);
       toast.success("Rota optimizasyonu başarıyla tamamlandı!");
 
     } catch (err) {
@@ -68,7 +81,7 @@ export default function RouteOptimization({ onOptimizationComplete }: RouteOptim
       )}
       
       <button
-        onClick={startOptimization}
+        onClick={handleOptimize}
         disabled={loading}
         className={`w-full bg-green-500 text-white p-3 rounded-lg hover:bg-green-600 transition-colors duration-200 flex items-center justify-center gap-2 ${
           loading ? "opacity-50 cursor-not-allowed" : ""

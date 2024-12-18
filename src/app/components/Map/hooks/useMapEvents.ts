@@ -34,7 +34,7 @@ export function useMapEvents(
               const dumpMarker = L.marker([lat, lng], {
                 icon: icons[activeSelection],
               }).addTo(mapRefs.mapRef.current!);
-              dumpMarker.bindPopup("Döküm Noktası");
+              dumpMarker.bindPopup("Boşaltım Noktası");
               mapRefs.markersRef.current.push(dumpMarker);
               break;
 

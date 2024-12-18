@@ -15,8 +15,8 @@ export async function createRoute(waypoints: [number, number][], color: string):
     const routeCoordinates = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
     const routeLine = L.polyline(routeCoordinates, {
       color,
-      weight: 3,
-      opacity: 0.8
+      weight: 5,
+      opacity: 1
     });
 
     const group = L.layerGroup([routeLine]);

@@ -83,10 +83,10 @@ export default function StartEndPointManagement() {
     try {
       const savedPoint = await startEndPointService.saveDumpPoint(dumpPoint);
       setDumpPoint(savedPoint);
-      toast.success("Döküm noktası başarıyla kaydedildi");
+      toast.success("Boşaltım noktası başarıyla kaydedildi");
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Döküm noktası kaydedilemedi"
+        err instanceof Error ? err.message : "Boşaltım noktası kaydedilemedi"
       );
     }
   };
@@ -167,7 +167,7 @@ export default function StartEndPointManagement() {
 
       {/* Döküm Noktası */}
       <div className="border rounded-lg p-4">
-        <h3 className="font-medium mb-3">Döküm Noktası</h3>
+        <h3 className="font-medium mb-3">Boşaltım Noktası</h3>
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <input

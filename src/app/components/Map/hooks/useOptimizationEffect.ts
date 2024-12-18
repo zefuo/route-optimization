@@ -12,13 +12,30 @@ export function useOptimizationEffect(
     if (!optimizationResult || !mapRefs.mapRef.current) return;
 
     // Mevcut rotaları ve markerları temizle
-    mapRefs.routeLinesRef.current.forEach(line => line.remove());
+    mapRefs.routeLinesRef.current.forEach((line) => line.remove());
     mapRefs.routeLinesRef.current = [];
-    mapRefs.markersRef.current.forEach(marker => marker.remove());
+    mapRefs.markersRef.current.forEach((marker) => marker.remove());
     mapRefs.markersRef.current = [];
 
-    const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFA500', '#800080', '#008080'];
-    const allRoutes = L.featureGroup();
+    const colors = [
+      "#FF3B30", // Kırmızı
+      "#34C759", // Yeşil
+      "#007AFF", // Mavi
+      "#FF9500", // Turuncu
+      "#AF52DE", // Mor
+      "#5856D6", // İndigo
+      "#FF2D55", // Pembe
+      "#5AC8FA", // Açık Mavi
+      "#FFCC00", // Sarı
+      "#4CD964", // Açık Yeşil
+    ];
+
+    let completedRoutes = 0;
+    const totalRoutes = optimizationResult.routes.length;
+    const allCoordinates: [number, number][] = [];
+
+    // Global sıra numarası için sayaç
+    let globalStepCounter = 1;
 
     optimizationResult.routes.forEach(async (route: any, index: number) => {
       if (!route.steps || route.steps.length < 2) return;
@@ -27,17 +44,21 @@ export function useOptimizationEffect(
         const coordinates = route.steps.map((step: any) => step.location);
         const color = colors[index % colors.length];
 
-        // Sıra numaralarını ekle
-        route.steps.forEach((step: any, stepIndex: number) => {
-          if (step.type === 'waste_point') {
+        coordinates.forEach((coord: [number, number]) => {
+          allCoordinates.push(coord);
+        });
+
+        // Sadece çöp noktaları için sıra numarası ekle
+        route.steps.forEach((step: any) => {
+          if (step.type === "waste_point") {
             const numberIcon = L.divIcon({
-              className: 'custom-number-icon',
+              className: "custom-number-icon",
               html: `<div style="
                 background-color: ${color};
                 color: white;
                 border-radius: 50%;
-                width: 20px;
-                height: 20px;
+                width: 24px;
+                height: 24px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -45,30 +66,56 @@ export function useOptimizationEffect(
                 font-weight: bold;
                 border: 2px solid white;
                 box-shadow: 0 0 4px rgba(0,0,0,0.4);
-              ">${stepIndex}</div>`,
-              iconSize: [20, 20],
-              iconAnchor: [10, 10]
+              ">${globalStepCounter}</div>`,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12],
             });
 
             const marker = L.marker([step.location[0], step.location[1]], {
-              icon: numberIcon
+              icon: numberIcon,
             }).addTo(mapRefs.mapRef.current!);
 
+            // Popup içeriğini zenginleştir
+            marker.bindPopup(`
+              <div style="font-family: Arial, sans-serif;">
+                <strong>Durak ${globalStepCounter}</strong><br>
+                Araç: ${route.vehicleId}<br>
+                Varış: ${new Date(step.arrival * 1000).toLocaleTimeString('tr-TR')}
+              </div>
+            `);
+
             mapRefs.markersRef.current.push(marker);
+            globalStepCounter++;
           }
         });
 
         const routeGroup = await createRoute(coordinates, color);
         routeGroup.addTo(mapRefs.mapRef.current!);
-        routeGroup.bindPopup(`Araç ${route.vehicleId} Rotası`);
+        
+        // Rota popup içeriğini zenginleştir
+        const routeDuration = Math.round(route.duration / 60);
+        const wastePointCount = route.steps.filter((step: any) => step.type === "waste_point").length;
+        routeGroup.bindPopup(`
+          <div style="font-family: Arial, sans-serif;">
+            <strong>Araç ${route.vehicleId}</strong><br>
+            Süre: ${routeDuration} dakika<br>
+            Durak Sayısı: ${wastePointCount}
+          </div>
+        `);
+        
         mapRefs.routeLinesRef.current.push(routeGroup);
-        allRoutes.addLayer(routeGroup);
 
-        if (allRoutes.getLayers().length > 0) {
-          mapRefs.mapRef.current.fitBounds(allRoutes.getBounds(), { padding: [50, 50] });
+        completedRoutes++;
+
+        if (completedRoutes === totalRoutes && allCoordinates.length > 0) {
+          const bounds = L.latLngBounds(allCoordinates);
+          mapRefs.mapRef.current?.fitBounds(bounds, {
+            padding: [50, 50],
+          });
         }
       } catch (error) {
         console.error(`Araç ${route.vehicleId} rotası çizilirken hata:`, error);
+        completedRoutes++;
       }
     });
   }, [optimizationResult, mapRefs]);

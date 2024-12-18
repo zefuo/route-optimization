@@ -33,7 +33,7 @@ export function useInitialPoints(mapRefs: MapRefs, icons: Record<string, L.Icon>
             [parseFloat(dumpPoint.latitude), parseFloat(dumpPoint.longitude)],
             { icon: icons["döküm_noktası"] }
           ).addTo(mapRefs.mapRef.current!);
-          marker.bindPopup("Döküm Noktası");
+          marker.bindPopup("Boşaltım Noktası");
           mapRefs.markersRef.current.push(marker);
         }
 

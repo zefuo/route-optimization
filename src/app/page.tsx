@@ -5,6 +5,7 @@ import Accordion from "./components/Accordion";
 import Map from "./components/Map";
 import Navbar from "./components/Navbar";
 import RouteOptimization from "./components/RouteOptimization";
+import { RouteStatistics } from "./components/RouteStatistics";
 import StartEndPointManagement from "./components/StartEndPointManagement";
 import VehicleManagement from "./components/VehicleManagement";
 import WastePointManagement from "./components/WastePointManagement";
@@ -12,15 +13,28 @@ import WastePointManagement from "./components/WastePointManagement";
 type OptimizationResult = {
   routes: Array<{
     vehicleId: number;
-    path: [number, number][];
+    duration: number;
+    steps: Array<{
+      location: [number, number];
+      type: string;
+      arrival: number;
+      duration: number;
+    }>;
   }>;
 };
 
 export default function Home() {
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+  const [vehicles, setVehicles] = useState<Array<{
+    id: number;
+    plate: string;
+    brand: string | null;
+    model: string | null;
+  }>>([]);
 
-  const handleOptimizationComplete = (result: OptimizationResult) => {
+  const handleOptimizationComplete = (result: OptimizationResult, usedVehicles: any[]) => {
     setOptimizationResult(result);
+    setVehicles(usedVehicles);
   };
 
   return (
@@ -38,11 +52,19 @@ export default function Home() {
           <Accordion title="Çöp Noktaları" id="wastepoints">
             <WastePointManagement />
           </Accordion>
-          <Accordion title="Başlangıç ve Döküm Noktaları" id="startend">
+          <Accordion title="Başlangıç ve Boşaltım Noktaları" id="startend">
             <StartEndPointManagement />
           </Accordion>
           <Accordion title="Rota Optimizasyonu" id="routes">
             <RouteOptimization onOptimizationComplete={handleOptimizationComplete} />
+            {optimizationResult && vehicles && (
+              <div className="mt-4">
+                <RouteStatistics 
+                  routes={optimizationResult.routes} 
+                  vehicles={vehicles}
+                />
+              </div>
+            )}
           </Accordion>
         </div>
         <div className="w-full md:w-3/4 p-4">
